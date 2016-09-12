@@ -1,0 +1,19 @@
+{
+  "name": "wav-stream-recorder",
+  "version": "0.0.1",
+  "description": "Record wav stream to file",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/common-tater/wav-stream-recorder.git"
+  },
+  "author": "Danny Bauman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/common-tater/wav-stream-recorder/issues"
+  },
+  "homepage": "https://github.com/common-tater/wav-stream-recorder#readme"
+}
