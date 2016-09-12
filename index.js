@@ -36,16 +36,25 @@ WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
   }
 
   function closeRecording (recordingId) {
-    if (this.files[recordingId]) {
-      this.files[recordingId].end()
+    var file = this.files[recordingId]
+
+    if (file) {
+      file.end()
+
+      var riffSizeBuffer = new Buffer(4)
+      riffSizeBuffer.writeUInt32LE(file._length + 52, 0)
+      var wavSizeBuffer = new Buffer(4)
+      wavSizeBuffer.writeUInt32LE(file._length, 0)
 
       var fsWriteStream = fs.createWriteStream(filepath, {start: 4, flags: 'r+'})
       fsWriteStream.on('open', function () {
-        var buf = new Buffer(4)
-        var fileSize = fs.stat(filepath, function (err, stat) {
-          buf.writeUInt32LE(stat.size - 8, 0)
-          fsWriteStream.write(buf)
-          fsWriteStream.end()
+        fsWriteStream.write(riffSizeBuffer)
+        fsWriteStream.end()
+
+        var fsWriteStream2 = fs.createWriteStream(filepath, {start: 48, flags: 'r+'})
+        fsWriteStream2.on('open', function () {
+          fsWriteStream2.write(wavSizeBuffer)
+          fsWriteStream2.end()
         })
       })
 
@@ -57,11 +66,11 @@ WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
     // if this isn't the first time we've written to this file,
     // strip the WAV/RIFF header from this chunk
     if (openFile._header) {
-      openFile._length += audioData[2]
-      audioData = audioData.slice(44)
+      audioData = audioData.slice(60)
+      openFile._length += audioData.length
     } else {
       openFile._header = true
-      openFile._length = audioData[2]
+      openFile._length = audioData.length - 60
     }
 
     openFile.write(audioData)
