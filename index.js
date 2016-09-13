@@ -65,6 +65,16 @@ WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
         wavSizeWriteStream.on('open', function () {
           wavSizeWriteStream.write(wavSizeBuffer)
           wavSizeWriteStream.end()
+
+          // rename the file by appending a unique timestamp so that any future
+          // stream with the same id doesn't overwrite this file
+          var archivedFilepath = filepath.replace('.wav', '-' + Date.now() + '.wav')
+
+          fs.rename(filepath, archivedFilepath, function(err) {
+            if (err) {
+              console.log('ERROR: ' + err)
+            }
+          })
         })
       })
 
