@@ -1,6 +1,6 @@
 {
   "name": "wav-stream-recorder",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Record wav stream to file",
   "main": "index.js",
   "scripts": {
