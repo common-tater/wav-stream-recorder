@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/common-tater/wav-stream-recorder/issues"
   },
-  "homepage": "https://github.com/common-tater/wav-stream-recorder#readme"
+  "homepage": "https://github.com/common-tater/wav-stream-recorder#readme",
+  "dependencies": {
+    "inherits": "2.0.3"
+  }
 }

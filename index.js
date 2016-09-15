@@ -1,6 +1,8 @@
 module.exports = WavStreamRecorder
 
 var fs = require('fs')
+var events = require('events')
+var inherits = require('inherits')
 
 var FILE_CLOSE_TIMEOUT = 5000 // 5 secs of no data before we close the file and rewrite headers
 var HEADER_OFFSET_RIFF_SIZE = 4 // bytes 4-7 are the riff container's location for the size of the data
@@ -8,10 +10,15 @@ var HEADER_OFFSET_WAV_SIZE = 48 // bytes 48-51 are the wav header's location for
 var WAV_HEADER_SIZE = 52 // 52 bytes
 var RIFF_HEADER_SIZE = 8 // 8 bytes
 
+inherits(WavStreamRecorder, events)
+
 function WavStreamRecorder () {
   this.files = {}
   this.timers = {}
+
+  events.EventEmitter.call(this)
 }
+
 
 WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
   var self = this
@@ -73,6 +80,8 @@ WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
           fs.rename(filepath, archivedFilepath, function(err) {
             if (err) {
               console.log('ERROR: ' + err)
+            } else {
+              self.emit('end', archivedFilepath, recordingId)
             }
           })
         })
