@@ -9,6 +9,7 @@ var HEADER_OFFSET_RIFF_SIZE = 4 // bytes 4-7 are the riff container's location f
 var HEADER_OFFSET_WAV_SIZE = 48 // bytes 48-51 are the wav header's location for the size of the data
 var WAV_HEADER_SIZE = 52 // 52 bytes
 var RIFF_HEADER_SIZE = 8 // 8 bytes
+var SAMPLE_RATE_OFFSET = 24 // 24 bytes
 
 inherits(WavStreamRecorder, events)
 
@@ -49,45 +50,51 @@ WavStreamRecorder.prototype.appendRecording = function (id, data, filepath) {
   }
 
   function closeRecording (recordingId) {
+    var newSelf = this
     var file = this.files[recordingId]
 
     if (file) {
       file.end()
 
-      // the riff and wav sizes will need to be converted to
-      // 4 byte buffers to be written to the file streams
-      var riffSizeBuffer = new Buffer(4)
-      riffSizeBuffer.writeUInt32LE(file._length + WAV_HEADER_SIZE, 0)
-      var wavSizeBuffer = new Buffer(4)
-      wavSizeBuffer.writeUInt32LE(file._length, 0)
+      sampleRateReader = fs.createReadStream(filepath, {start: SAMPLE_RATE_OFFSET, end: SAMPLE_RATE_OFFSET + 3})
+      sampleRateReader.on('data', function (data) {
+        var sampleRate = data.readUInt32LE(0)
 
-      // write the riff size header first
-      var riffSizeWriteStream = fs.createWriteStream(filepath, {start: HEADER_OFFSET_RIFF_SIZE, flags: 'r+'})
-      riffSizeWriteStream.on('open', function () {
-        riffSizeWriteStream.write(riffSizeBuffer)
-        riffSizeWriteStream.end()
+        // the riff and wav sizes will need to be converted to
+        // 4 byte buffers to be written to the file streams
+        var riffSizeBuffer = new Buffer(4)
+        riffSizeBuffer.writeUInt32LE(file._length + WAV_HEADER_SIZE, 0)
+        var wavSizeBuffer = new Buffer(4)
+        wavSizeBuffer.writeUInt32LE(file._length, 0)
 
-        // then write the wav size header
-        var wavSizeWriteStream = fs.createWriteStream(filepath, {start: HEADER_OFFSET_WAV_SIZE + RIFF_HEADER_SIZE, flags: 'r+'})
-        wavSizeWriteStream.on('open', function () {
-          wavSizeWriteStream.write(wavSizeBuffer)
-          wavSizeWriteStream.end()
+        // write the riff size header first
+        var riffSizeWriteStream = fs.createWriteStream(filepath, {start: HEADER_OFFSET_RIFF_SIZE, flags: 'r+'})
+        riffSizeWriteStream.on('open', function () {
+          riffSizeWriteStream.write(riffSizeBuffer)
+          riffSizeWriteStream.end()
 
-          // rename the file by appending a unique timestamp so that any future
-          // stream with the same id doesn't overwrite this file
-          var archivedFilepath = filepath.replace('.wav', '-' + Date.now() + '.wav')
+          // then write the wav size header
+          var wavSizeWriteStream = fs.createWriteStream(filepath, {start: HEADER_OFFSET_WAV_SIZE + RIFF_HEADER_SIZE, flags: 'r+'})
+          wavSizeWriteStream.on('open', function () {
+            wavSizeWriteStream.write(wavSizeBuffer)
+            wavSizeWriteStream.end()
 
-          fs.rename(filepath, archivedFilepath, function(err) {
-            if (err) {
-              console.log('ERROR: ' + err)
-            } else {
-              self.emit('end', archivedFilepath, recordingId)
-            }
+            // rename the file by appending a unique timestamp so that any future
+            // stream with the same id doesn't overwrite this file
+            var archivedFilepath = filepath.replace('.wav', '-' + Date.now() + '.wav')
+
+            fs.rename(filepath, archivedFilepath, function(err) {
+              if (err) {
+                console.log('ERROR: ' + err)
+              } else {
+                newSelf.emit('end', archivedFilepath, recordingId, sampleRate)
+              }
+            })
           })
         })
       })
 
-      delete this.files[recordingId]
+      delete newSelf.files[recordingId]
     }
   }
 
